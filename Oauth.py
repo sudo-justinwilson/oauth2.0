@@ -242,5 +242,5 @@ if __name__ == '__main__':
     # this is to test the get_token() method.
     #   Since I should already have the refresh_token stored in self._credentials_file, get_token() should automatically decide whether it requires a new token, or not, depending on the time:
     
-    oauth = Oauth('new-credentials.test')
-    oauth.initialize()
+    oauth = Oauth('credentials.json')
+    oauth.authorize()
