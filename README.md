@@ -1,2 +1,2 @@
-# gdrive4linux
-A Google Drive client for Linux
+# oauth2.0
+This is a Python library for authenticating with oauth2.0 (namely Google), but it should be able to work with any oauth2.0 provider...
