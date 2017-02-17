@@ -14,6 +14,22 @@ import urllib
 class Oauth:
     """
     This class contains the methods for handling Google authentication with Oauth2.0.
+    The idea with this class is that it should be initialized with a credentials_file and the only method that the user calls will be self.authorize(), which stores the access and refresh token in the credentials_file.
+    The self.get_token should also be a public method, so the user can get a token.
+    E.G:
+        oauth = Oauth('./credentials.json')
+        oauth.authorize()
+        token = oauth.get_token()
+        api_call(token....
+
+    Ideally, self.authorize() would be called with by __init__() so the user doesn't even have to call it at all:
+    E.G:
+        oauth = Oauth('./credentials.json')
+        # user asked to authorize in browser...
+        token = oauth.get_token()...
+    
+    So after I have ironed out the bugs, I should be able to hide the implementation details in non-public methods, so the user is only provided with only the required methods.
+    I also want to eventually refactor this code so that it can be used with any oauth2.0 compliant service.
     """
     def __init__(self, credentials_file='credentials.json'):
         """
@@ -33,8 +49,13 @@ class Oauth:
         
     def auth_in_browser(self, params=None, url=None):
         """
-        This function opens up the web browser to authenticate with oauth2.
-        So, this should be called just before the web server has started up, so it can catch the response from this.
+        This method opens up the web browser to authenticate with Google's oauth2, using paramaters that specify the app that's requesting access to the resource. 
+        If the user grants permission to the app, Google's oauth2.0 server makes an HTTP request to the specified redirect_uri on port self._port. 
+        The HTTP request contains an "authorization code" that will be exchanged for access tokens, which can then be used to access a user resource.
+        So after this method is called, self.serve_html is called to start a basic web server that intercepts and stores the auth code, so it can be passed as a parameter to self.swap_code, which is called by self.serve_html.
+        This method shouldn't have to be called by the user, so it should be a non-public method.
+        The user should only have to call the self.authorize method, which makes the necessary calls to aquire the access tokens.
+        This should be called just before the web server has started up, so it can catch the response from this.
         
         url     -           the base url to open up in browser
 
@@ -68,17 +89,24 @@ class Oauth:
 
     def serve_html(self):
         """
-        This is the web server that receives the HTTP response with the credentials, from Google.
+        This method starts a basic web server that listens on self._port, to accept the HTTP request from Google's oauth server that contains the authorization code.
+        As the auth code is in the actual HTTP request, we use a custom handler (myGetHandler) which intercepts the actual HTTP request, and stores it in memory.
         """
+        # the port that the web server will listen on
         PORT = self._port
+        # the custom handler that intercepts and parses the auth code:
         Handler = myGetHandler
+        # define the web server and the request handler that will be called for each HTTP request:
         httpd = socketserver.TCPServer(("", PORT), Handler)
         print("serving at port", PORT)
+        # start the web server and listen for one request:
         httpd.handle_request()
+        # "path" is the attribute that contains the path that was requested in the http request:
         path = Handler.path
+        # trying different approaches for storing the request:
         path2 = Handler.get_path()
         ### NEW
-        # Parse the response for auth_code and state
+        # Parse the response (**I thought it was a request??) for auth_code and state (state should return self.nonce):
         response = urllib.parse.urlparse(path)
         for element in response.query.split(sep='&'):
             if element.startswith('state'):
@@ -102,11 +130,16 @@ class Oauth:
             print("THIS IS THE CODE: ", code)
             print("THIS IS THE STATE: ", state)
         """
+        # if the nonces match, call swap_code, else print error:
         if self._nonce == state:
             self.swap_code(code)
         else:
             print("The sent nonce does not match the return nonce.")
+            # it would be better to raise an Exception:
+            # raise Exception("The sent nonce does not match the return nonce.")
+        # debugging..
         print("THIS IS THE PATH: ", path, "THIS IS PATH2: ", path2)
+        # I wanted to return a some value that we could test against, but I'm not sure if it is required???
         return 0
 
 
@@ -114,6 +147,8 @@ class Oauth:
         """
         This method swaps the auth code, from self.serve_html(), for the oauth tokens. 
         It should store the oauth tokens, from the HTTP response, in a credentials file, and get_token() should actually get the token.
+        This method should not be called by the user as it is called by other methods (serve_html) and should be non-public.
+        Eventually, the creds_file param should be removed as well as it is defined with __init__, and the user should only have to call self.authorize(), but until I've got this class where I want it, creds_file will remain for debugging...
 
         - TARGET URL 
             (https://accounts.google.com/o/oauth2/v2/auth) + '?'
@@ -154,7 +189,7 @@ class Oauth:
 
     def authorize(self):
         """
-        This function just calls the functions required to initially grant permission for Google drive.
+        This function just calls the methods required to initially grant permission for Google.
         """
         print("Please grant application permission in browser...")
         self.auth_in_browser()
@@ -163,9 +198,9 @@ class Oauth:
 
     def get_token(self, creds_file=None):
         """
-        This method returns either the access_token (if it hasn't expired), or will refresh the token if the access token has expired.
-        Either way, it returns a valid access token.
+        This method returns either the access_token (if it hasn't expired), or will refresh the token if the access token has expired, either way, it returns a valid access token.
         """
+        # check that there is a credentials file, otherwise start a new oauth2.0 flow:
         if creds_file is None:
             creds_file = self._credentials_file
             if not os.path.exists(self._credentials_file):
@@ -173,12 +208,15 @@ class Oauth:
                 #print("""There is no credentials file.
                 #Please use self.authorize to create a credentials file and pass it as an argument to creds_file=""") 
                 #return -1
+        # load credentials:
         creds = json.load(open(creds_file))
+        # check if the tokens are under 3600 seconds old:
         if (int(time.time()) - creds['time_received']) > 3580:
+            # if the token is older than 3600s, refresh the token:
             new_token = self.refresh_token()
             # new_token['time_received'] = time.time() <- NOT NECESSARY, AS IT IS HANDLED BY refresh_token.
+            # update creds_file with new token:
             with open(creds_file, 'w') as credentials:
-                # update new token
                 credentials.writelines(json.dumps(new_token))   # json.dumps(object) serializes object into type(str)
             return new_token['access_token']
         else:
