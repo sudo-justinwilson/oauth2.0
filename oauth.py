@@ -13,6 +13,10 @@ import urllib
 
 class Oauth:
     """
+    This class lets the user use Google's oauth2.0 authentication.
+    To use just create an instance; call self.authorize; then self.get_token will return a valid access_token.
+
+
     This class contains the methods for handling Google authentication with Oauth2.0.
     The idea with this class is that it should be initialized with a credentials_file and the only method that the user calls will be self.authorize(), which stores the access and refresh token in the credentials_file.
     The self.get_token should also be a public method, so the user can get a token.
@@ -335,3 +339,4 @@ if __name__ == '__main__':
     # the above code has been tested and is working correctly!
     # TODO: define self.is_valid(token) method to test if the token is valid
     # TODO: clean up the comments
+    # make it so that the app credentials are parameters, and be used by anyone's app
