@@ -38,6 +38,15 @@ class Oauth:
     def __init__(self, credentials_file='credentials.json'):
         """
         Create an instance of the Oauth class.
+
+        TO-DO:
+        - refactor __init__() so that it accepts **kwargs as a param:
+            def __init__(self, credentials_file=None, client-id=None):
+                if client-id is not None:
+                    self.client_credentials_as_dict = json.load(open(client-id))
+        This will allow us to instantiate an Oauth object by passing "key=value" pairs:
+            oauth = Oauth(json.load(open('google-clientid.json'))
+        - get client-id.json for Google Contacts API
         """
         self._scope = 'https://www.googleapis.com/auth/drive'
         self._nonce = Oauth.nonce(self, size=136)
@@ -285,6 +294,15 @@ class Oauth:
         answer['time_received'] = int(time.time())
         return answer
 
+        def is_valid(self, token):
+            print("Checking if token is valid...")
+            target = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
+            r = requests.get(target, params={'access_token':token})
+            if r.status_code == 200:
+                return True
+            else:
+                return False
+
 class myGetHandler(http.server.SimpleHTTPRequestHandler):
 
     
@@ -333,9 +351,9 @@ if __name__ == '__main__':
     ## step 3) test get_token()
     token = oauth.get_token()
     print("This is the token returned by get_token:\t", token)
-    target = 'https://www.googleapis.com/drive/v2/files'
-    r = requests.get(target, params={'access_token':token})
-    print(r.text)
+    #target = 'https://www.googleapis.com/drive/v2/files'
+    #r = requests.get(target, params={'access_token':token})
+    #print(r.text)
     # the above code has been tested and is working correctly!
     # TODO: define self.is_valid(token) method to test if the token is valid
     # TODO: clean up the comments
