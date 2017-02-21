@@ -34,6 +34,7 @@ class Oauth:
     
     So after I have ironed out the bugs, I should be able to hide the implementation details in non-public methods, so the user is only provided with only the required methods.
     I also want to eventually refactor this code so that it can be used with any oauth2.0 compliant service.
+
     """
     def __init__(self, credentials_file='credentials.json'):
         """
@@ -46,6 +47,15 @@ class Oauth:
                     self.client_credentials_as_dict = json.load(open(client-id))
         This will allow us to instantiate an Oauth object by passing "key=value" pairs:
             oauth = Oauth(json.load(open('google-clientid.json'))
+        		EG:
+				def __init__(self, **kwargs):
+    				self.redirect_uris = kwargs['redirect_uris']
+    				self.client_id = kwargs['client_id']
+    				self.token_uri = kwargs['token_uri']
+    				self.client_secret = kwargs['client_secret']
+    				self.auth_uri = kwargs['auth_uri']
+    				self.project_id = kwargs['project_id']
+
         - get client-id.json for Google Contacts API
         """
         self._scope = 'https://www.googleapis.com/auth/drive'
