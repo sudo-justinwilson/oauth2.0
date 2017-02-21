@@ -1,0 +1,6 @@
+# oauth2.0
+This is a Python library for authenticating with oauth2.0 (namely Google), but it should be able to work with any oauth2.0 provider...
+
+I wrote it to use for Linux, and don't think it would work on other platforms, but it shouldn't be too hard to port...
+
+I pretty much wrote it from scratch using mostly built-in Python modules. I think the "requests" module is the only one that I installed with pip.
