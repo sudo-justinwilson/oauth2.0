@@ -13,6 +13,10 @@ import urllib
 
 class Oauth:
     """
+    This class lets the user use Google's oauth2.0 authentication.
+    To use just create an instance; call self.authorize; then self.get_token will return a valid access_token.
+
+
     This class contains the methods for handling Google authentication with Oauth2.0.
     The idea with this class is that it should be initialized with a credentials_file and the only method that the user calls will be self.authorize(), which stores the access and refresh token in the credentials_file.
     The self.get_token should also be a public method, so the user can get a token.
@@ -34,6 +38,15 @@ class Oauth:
     def __init__(self, credentials_file='credentials.json'):
         """
         Create an instance of the Oauth class.
+
+        TO-DO:
+        - refactor __init__() so that it accepts **kwargs as a param:
+            def __init__(self, credentials_file=None, client-id=None):
+                if client-id is not None:
+                    self.client_credentials_as_dict = json.load(open(client-id))
+        This will allow us to instantiate an Oauth object by passing "key=value" pairs:
+            oauth = Oauth(json.load(open('google-clientid.json'))
+        - get client-id.json for Google Contacts API
         """
         self._scope = 'https://www.googleapis.com/auth/drive'
         self._nonce = Oauth.nonce(self, size=136)
@@ -41,6 +54,8 @@ class Oauth:
         self._redirect_uri = 'http://127.0.0.1:' + str(self._port)
         self._credentials_file = credentials_file
         self._code = None       # this is not required and should be retrieved via an accessor method, or return value but could be useful for debugging.
+        # for testing:
+        self.token_age = None
 
     # these are the class attributes:
     _server = 'https://www.googleapis.com/auth/drive'           # this should be embedded in the method.
@@ -200,31 +215,52 @@ class Oauth:
         """
         This method returns either the access_token (if it hasn't expired), or will refresh the token if the access token has expired, either way, it returns a valid access token.
         """
-        # check that there is a credentials file, otherwise start a new oauth2.0 flow:
+        # check that there is a credentials file, raise exception:
         if creds_file is None:
             creds_file = self._credentials_file
             if not os.path.exists(self._credentials_file):
-                self.authorize()
+                #self.authorize()       # I decided that this could lead to undefined behaviour..
+                raise Exception("This app has not yet been granted permission. \
+                Please call self.authorize() needs to grant permission to this app and to get an authorization code.")
                 #print("""There is no credentials file.
                 #Please use self.authorize to create a credentials file and pass it as an argument to creds_file=""") 
                 #return -1
         # load credentials:
         creds = json.load(open(creds_file))
         # check if the tokens are under 3600 seconds old:
-        if (int(time.time()) - creds['time_received']) > 3580:
-            # if the token is older than 3600s, refresh the token:
-            new_token = self.refresh_token()
+        # for testing:
+        # if the token is older than 3600s, refresh the token:
+        #if (int(time.time()) - creds['time_received']) > 3580:
+            # store the existing refresh_token, as the json returned from refresh_token() does not have one:
+        self.token_age = age = int(time.time()) - creds['time_received']
+        if age > 3580:
+            print(int(time.time()), '  ', creds['time_received'], '  should == ', age)
+            print("Refreshing token...")
+            # store existing refresh_token:
+            temp_refresh_token = creds['refresh_token']
+            # refresh_token() returns a dict:
+            new_token = self.refresh_token()        
+            print("New token:\t", new_token)
+            # create 'refresh_token' key in the new token, so new_token.keys() should == access_token, token_type, expires_in, refresh_token: plus 'time_received' which I defined:
+            new_token['refresh_token'] = temp_refresh_token
             # new_token['time_received'] = time.time() <- NOT NECESSARY, AS IT IS HANDLED BY refresh_token.
-            # update creds_file with new token:
+            if len(new_token.keys()) == 5:
+                # update creds_file with new access_token:
+                json.dump(new_token, open(creds_file, 'w'))         #json.dump(obj, fp)
+            else:
+                raise Exception("The refresh token should have 5 keys, but there isn't...")
+            """
             with open(creds_file, 'w') as credentials:
                 credentials.writelines(json.dumps(new_token))   # json.dumps(object) serializes object into type(str)
+            """
             return new_token['access_token']
         else:
             return creds['access_token']
            
 
-    def refresh_token(self, credentials_file='credentials.json'):
+    def refresh_token(self, creds_file=None):
         """
+        This method returns the refresh_token as a dict. It DOES NOT UPDATE THE CREDS FILE! That should be handled by the caller.
         This method return a refresh_token (which should be a json response) as a dict. IT DOES NOT UPDATE THE CREDENTIALS_FILE! <- this should be handled by the caller.
         So the items required to get a refresh token are:
         - client_id             CONSTANT
@@ -235,11 +271,18 @@ class Oauth:
         - And it uses the POST method.
         """
         refresh_url = 'https://accounts.google.com/o/oauth2/token'
+        # check that there is a credentials file, raise exception:
+        if creds_file is None:
+            creds_file = self._credentials_file
+            if not os.path.exists(self._credentials_file):
+                #self.authorize()       # I decided that this could lead to undefined behaviour..
+                raise Exception("This app has not yet been granted permission. \
+                Please call self.authorize() needs to grant permission to this app and to get an authorization code.")
         params = {
             'client_id' : Oauth._client_id,
             'client_secret' : self._client_secret,
             'grant_type' : 'refresh_token',
-            'refresh_token' : json.load(open(credentials_file))['refresh_token']
+            'refresh_token' : json.load(open(creds_file))['refresh_token']
             }
     
         try:
@@ -247,8 +290,18 @@ class Oauth:
         except ValueError as e:
             print("REFRESH HTTP RESPONSE DID NOT CONTAIN VALID JSON: ", e)
         answer = oauth_refresh.json()
-        answer['time_received'] = time.time()
+        # testing
+        answer['time_received'] = int(time.time())
         return answer
+
+        def is_valid(self, token):
+            print("Checking if token is valid...")
+            target = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
+            r = requests.get(target, params={'access_token':token})
+            if r.status_code == 200:
+                return True
+            else:
+                return False
 
 class myGetHandler(http.server.SimpleHTTPRequestHandler):
 
@@ -280,5 +333,28 @@ if __name__ == '__main__':
     # this is to test the get_token() method.
     #   Since I should already have the refresh_token stored in self._credentials_file, get_token() should automatically decide whether it requires a new token, or not, depending on the time:
     
-    oauth = Oauth('credentials.json')
-    oauth.authorize()
+    oauth = Oauth('/home/justin/tmp/credentials.json')
+    # step 1)
+    #oauth.authorize()
+    # the above completed successfully, and created the self.credentials_file, with the initial access_token[s]
+    ## step 2)
+    #token = oauth.get_token()
+    #print("access token:\t", token)
+    #print("age of token:\t", oauth.token_age)
+    # step 2 seemed to return a valid access_token, but I did NOT actually test it with an API call..
+    ## step 3) test what, and what type self.refresh_token() returns:
+    # I also have to test if changing the default arg of creds_file=None works:
+    #refresh_token = oauth.refresh_token()
+    #print("The type returned  by refresh_token() is: \t", type(refresh_token))
+    #print("The actual content returned by refresh_token() is: \t", refresh_token)
+    # refresh_token seems to work, but I haven't validated it yet... with is_valid...
+    ## step 3) test get_token()
+    token = oauth.get_token()
+    print("This is the token returned by get_token:\t", token)
+    #target = 'https://www.googleapis.com/drive/v2/files'
+    #r = requests.get(target, params={'access_token':token})
+    #print(r.text)
+    # the above code has been tested and is working correctly!
+    # TODO: define self.is_valid(token) method to test if the token is valid
+    # TODO: clean up the comments
+    # make it so that the app credentials are parameters, and be used by anyone's app
