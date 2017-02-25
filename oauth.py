@@ -294,14 +294,14 @@ class Oauth:
         answer['time_received'] = int(time.time())
         return answer
 
-        def is_valid(self, token):
-            print("Checking if token is valid...")
-            target = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
-            r = requests.get(target, params={'access_token':token})
-            if r.status_code == 200:
-                return True
-            else:
-                return False
+    def is_valid(self, token):
+        print("Checking if token is valid...")
+        target = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
+        r = requests.get(target, params={'access_token':token})
+        if r.status_code == 200:
+            return True
+        else:
+            return False
 
 class myGetHandler(http.server.SimpleHTTPRequestHandler):
 
@@ -351,6 +351,10 @@ if __name__ == '__main__':
     ## step 3) test get_token()
     token = oauth.get_token()
     print("This is the token returned by get_token:\t", token)
+    if oauth.is_valid(token):
+        print('the token is valide')
+    else:
+        print('the token is NOT valid!!!')
     #target = 'https://www.googleapis.com/drive/v2/files'
     #r = requests.get(target, params={'access_token':token})
     #print(r.text)
