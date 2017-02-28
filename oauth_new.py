@@ -19,18 +19,26 @@ class Oauth:
         """
         This is the credentials of the application (client) that is requesting access to the protected resource, on behalf of the user.
         """
-        def __init__(self, **kwargs):
+        def __init__(self, client_file=None, **kwargs):
             """
-            This sets the client credentials.
+            This sets the client credentials, so that the oauth provider can identify who is requesting access to the protected user resources.
+
             The following parameters are required for Oauth2.0:
-                    - 'client_id',
-                    - 'client_secret',
-                    - 'scope'
-            The params are expected as key:value pairs.
-                With a file:
-                    ClientCredentials(
+                    - 'client_id'	the ID of the application that is requesting access on behalf of the user.
+                    - 'client_secret'	a unique string that further identifies the application.
+            
+            These are the optional parameters:
+                    - client_file   If you would like to pass the parameters as a json encoded, text file, use this to set the path. The file will be parsed into a dict, and the mandatory args above will have to be in the file, or an exception will be raised.
+                    - 'scope'		the scope is what resource, and actions to the resource are being requested.
+            
+                The params are expected as key:value pairs.
+                    client_creds = ClientCredentials('client_id' : 'gagargfr....')
+                Or you can pass a dict:
+                    client_creds = ClientCredentials(**dict)
+                Or a file:
+                    client_creds = ClientCredentials(client_file='/path/to/file')
+                
             """
-            self.file = filepath
         def __init__(self, **kwargs):
             if 'filepath' in kwargs.keys():
                 self.path = kwargs['filepath']
@@ -43,6 +51,27 @@ class Oauth:
                 for param in req_params:
                     if param not in kwargs.keys()
                     raise Exception(param, " parameter required!"
+
+
+        def get_key(self, obj, key):
+            """
+            Utility method to return the value of key. If there is a key called 'key' in obj's keys, it will return its value, else, it will test if any of obj.keys() are dict, and look for the key there, it will recursively test each item of any nested dicts, to see if it contains the key, else return an error if the key is not found.
+
+            EG:
+                obj = {'key1' : 'val1', 'nested_dict' : 
+                        {'n_key1': 'n_val1', 'n_key2' : 'n_val2'}
+                        }
+                ^ get_key(obj, 'n_key2')
+                  'n_val2'
+            """	
+            if key in obj.keys():
+                return obj[key]
+            else:
+                for item in obj.keys():
+                    print('this is in the loop: ', item)
+                    if isinstance(obj[item], dict):
+                        return get_key(obj[item], key)
+            raise KeyError(key, ' value not found')
 
         def get(self, attr):
             """
@@ -114,9 +143,9 @@ class Oauth:
                 self.scope = kwargs['scope']
                 self.client_id = kwargs['client_id']
                 self.client_secret = kwargs['client_secret']
+ 
 
-        
-
+    # old get_key()
     def get_key(self, obj, key):
         """
         Utility method to return the value of key. If there is a key called 'key' in obj's keys, it will return its value, else, it will test if any of obj.keys() are dict, and look for the key there. It only tests one level down.
