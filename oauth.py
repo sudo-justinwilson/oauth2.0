@@ -11,7 +11,7 @@ import urllib
 
 # other files in ./:
 from clientcredentials import ClientCredentials
-from webhandler_with_testclass_returncode import WebServer
+from webserver import WebServer
 
 ###     START NEW           ###
 class Oauth:
