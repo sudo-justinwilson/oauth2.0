@@ -47,7 +47,7 @@ class Oauth:
         - chmod 600 user_path
         - define ONE oauth2.0 server in __init__(), because as far as I can tell, there is only one oauth server...
         """
-        self._user_path = user_path
+        self.user_path = user_path
         self.webserver = WebServer()
         # Test if a path to the json file that contains the client_id and secret has been passed to init, else, the client params should be passed as key:value pairs to kwargs, which will then be returned as a dict. kwargs.keys() will be tested to ensure that the right values have been passed or an exception will be raised.
         if client_creds:
@@ -97,7 +97,7 @@ class Oauth:
         url = target + '?' + urllib.parse.urlencode(params)
         webbrowser.open_new_tab(url)
 
-    def _swap_code(self, code, params=None, creds_file=None):
+    def swap_code(self, code, params=None, creds_file=None):
         """
         This method swaps the auth code, from self.webserver.serve_html(), for the oauth tokens. 
         It should store the oauth tokens, from the HTTP response, in a credentials file, and get_token() should actually get the token.
@@ -121,7 +121,7 @@ class Oauth:
             params = {
             'client_id' : self.client_creds.client_id,
             'client_secret' : self.client_creds.client_secret,
-            'redirect_uri' : self.webserver._redirect_uri,
+            'redirect_uri' : self.webserver.redirect_uri,
             'grant_type' : 'authorization_code'
             }
 
@@ -143,7 +143,7 @@ class Oauth:
             path = self.user_path
         json.dump(oauth_response, path)
 
-###     END  NEW           ###
+    ###     END  NEW           ###
 
     def authorize(self):
         """
@@ -154,6 +154,9 @@ class Oauth:
         code = self.webserver.serve_html()
         self.swap_code(code)
 
+
+
+###     END  NEW           ###
 
     def get_token(self, creds_file=None):
         """
@@ -217,7 +220,7 @@ class Oauth:
         refresh_url = 'https://accounts.google.com/o/oauth2/token'
         # check that there is a credentials file, else raise exception:
         if creds_file is None:
-            creds_file = self._user_path
+            creds_file = self.user_path
             if not os.path.exists(self._credentials_file):
                 #self.authorize()       # I decided that this could lead to undefined behaviour..
                 raise Exception("This app has not yet been granted permission. \

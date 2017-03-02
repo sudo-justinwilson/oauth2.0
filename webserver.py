@@ -68,7 +68,7 @@ class WebServer:
         if state:
             print('state is: ', state)
         if self._nonce_sent:
-            # if the nonces match, call swap_code, else print error:
+            # if the nonces match, return code, else raise error:
             if self.nonce == state:
                 return code
             else:
