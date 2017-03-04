@@ -9,20 +9,15 @@ import string
 import webbrowser
 import urllib
 
-# other files in ./:
+#from other files in ./:
 from clientcredentials import ClientCredentials
 from webserver import WebServer
 
-###     START NEW           ###
 class Oauth:
     """
+    Library for installed applications to make oauth2.0 authorized API calls.
+
     """
-    #   Start nested classes    #
-        ###############################################
-
-        ###############################################
-    #   End nested classes    #
-
     def __init__(self, user_path, client_creds=None, scope=None, **kwargs):
         """
         Initialize Oauth object.
