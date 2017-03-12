@@ -47,12 +47,11 @@ class WebServer:
         #Handler = self.handler
         # define the web server and the request handler that will be called for each HTTP request:
         httpd = socketserver.TCPServer(("", PORT), self.handler)
-        print("serving at port", PORT)
+        #print("serving at port", PORT)
         # start the web server and listen for one request:
         httpd.handle_request()
         # "path" is the attribute that contains the path that was requested in the http request:
         path = Handler.path
-        print('this is the path: ', path)
         # Parse the response (**I thought it was a request??) for auth_code and state (state should return self.nonce):
         code, state = None, None
         response = urllib.parse.urlparse(path)
@@ -62,11 +61,6 @@ class WebServer:
                     state = element.split(sep='=')[1] 
                 if element.startswith('code'):
                     code = element.split(sep='=')[1] 
-
-        if code:
-            print('code is: ', code)
-        if state:
-            print('state is: ', state)
         if self._nonce_sent:
             # if the nonces match, return code, else raise error:
             if self.nonce == state:
@@ -84,14 +78,9 @@ class Handler(SimpleHTTPRequestHandler):
         return Handler.path
 
     def do_GET(self):
-        print("THIS IS THE FULL RESPONSE: ", self.headers)
-        print("THIS IS THE path: ", self.path)
         Handler.path = self.path
         http.server.SimpleHTTPRequestHandler.do_GET(self)
 
-    #def call_get_request(self):
-    #    answer = super().get_request(self)
-    #    return answer
 class Testing:
     """
     For testing if this module works..

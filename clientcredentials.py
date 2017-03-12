@@ -45,7 +45,6 @@ class ClientCredentials:
             return obj[key]
         else:
             for item in obj:
-                print('this is in the loop: ', item)
                 if isinstance(obj[item], dict):
                     return self.get_key(obj[item], key)
         raise KeyError(key, ' value not found')

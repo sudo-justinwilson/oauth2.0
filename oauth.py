@@ -23,15 +23,13 @@ class Oauth:
         ###############################################
     #   End nested classes    #
 
-    def __init__(self, user_path, client_creds=None, scope=None, **kwargs):
+    def __init__(self, token_path=None, client_creds=None, scope=None, **kwargs):
         """
         Initialize Oauth object.
         The client (the app that is requesting access to the user (user=resource owner) resources on behalf of user.
 
-		Mandatory args:
-		user_path	-	the path to where the user's access/refresh tokens will be stored.
-        
         Optional args:
+		token_path	-	the path to where the user's access/refresh tokens will be stored.
         - client_creds  -   this is a convenience that allows the caller to pass a dict that contains the client_id and client_secret as, or as a string that is the path to a file that contains the client credentials in json format.
         EG:
             # pass a dict:
@@ -44,10 +42,13 @@ class Oauth:
         
 
         TODO:
-        - chmod 600 user_path
+        - chmod 600 token_path
         - define ONE oauth2.0 server in __init__(), because as far as I can tell, there is only one oauth server...
         """
-        self.user_path = user_path
+        if token_path:
+            self.token_path = token_path
+        else: 
+            self.token_path = os.path.expanduser('~/.contacts_address_resolution')
         self.webserver = WebServer()
         # Test if a path to the json file that contains the client_id and secret has been passed to init, else, the client params should be passed as key:value pairs to kwargs, which will then be returned as a dict. kwargs.keys() will be tested to ensure that the right values have been passed or an exception will be raised.
         if client_creds:
@@ -97,12 +98,12 @@ class Oauth:
         url = target + '?' + urllib.parse.urlencode(params)
         webbrowser.open_new_tab(url)
 
-    def swap_code(self, code, params=None, creds_file=None):
+    def swap_code(self, code, params=None, token_path=None, oauth_server=None):
         """
         This method swaps the auth code, from self.webserver.serve_html(), for the oauth tokens. 
         It should store the oauth tokens, from the HTTP response, in a credentials file, and get_token() should actually get the token.
         This method should not be called by the user as it is called by other methods (serve_html) and should be non-public.
-        Eventually, the creds_file param should be removed as well as it is defined with __init__, and the user should only have to call self.authorize(), but until I've got this class where I want it, creds_file will remain for testing...
+        Eventually, the token_path param should be removed as well as it is defined with __init__, and the user should only have to call self.authorize(), but until I've got this class where I want it, token_path will remain for testing...
 
         - TARGET URL 
             (https://accounts.google.com/o/oauth2/v2/auth) + '?'
@@ -117,6 +118,8 @@ class Oauth:
             '696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com
         *** PARAMS ARE DELIMITED WITH '&'   ***
         """
+        if not oauth_server:
+            oauth_server = 'https://accounts.google.com/o/oauth2/token'
         if not isinstance(params, dict):
             params = {
             'client_id' : self.client_creds.client_id,
@@ -127,23 +130,22 @@ class Oauth:
 
         params['code'] = code
         try:
-            oauth_request = requests.post('https://accounts.google.com/o/oauth2/token', data=params)
-            print("THIS IS THE RESPONSE TEXT: ", oauth_request.text)
-            # oauth_response = json.dumps(oauth_request.json())       # This stores the json response as a json string.
+            oauth_request = requests.post(oauth_server, data=params)
+            #oauth_request = requests.post('https://accounts.google.com/o/oauth2/token', data=params)
             oauth_response = oauth_request.json()       # This stores the json response as a json string.
         except ValueError as e:
             print("THE RESPONSE DID NOT CONTAIN ANY VALID JSON: ", e)
-            return 'NO JSON IN RESPONSE'
+            #return 'NO JSON IN RESPONSE'
+            return 
         oauth_response['time_received'] = int(time.time())
-        print("Here is the full credentials dict, that should have a time_received key: ", oauth_response)
-        # if creds_file was specified, store user credentials there as a json file, else use value from __init__:
-        if creds_file:
-            path = creds_file
+        #print("Here is the full credentials dict, that should have a time_received key: ", oauth_response)
+        # if token_path was specified, store user credentials there as a json file, else use value from __init__:
+        if token_path:
+            path = token_path
         else:
-            path = self.user_path
-        json.dump(oauth_response, path)
+            path = self.token_path
+        json.dump(oauth_response, open(path, 'w'))
 
-    ###     END  NEW           ###
 
     def authorize(self):
         """
@@ -154,57 +156,42 @@ class Oauth:
         code = self.webserver.serve_html()
         self.swap_code(code)
 
-
-
-###     END  NEW           ###
-
-    def get_token(self, creds_file=None):
+    def get_token(self, token_path=None):
         """
-        This method returns either the access_token (if it hasn't expired), or will refresh the token if the access token has expired, either way, it returns a valid access token.
+        This method returns either the existing access_token (if it hasn't expired), or if it has, it will refresh the token, either way, it returns a valid access token.
         """
-        # check that there is a credentials file, raise exception:
-        if creds_file is None:
-            creds_file = self.user_path
-            if not os.path.exists(self._credentials_file):
+        # check that a file exists at self.token_path, else raise exception:
+        if token_path is None:
+            token_path = self.token_path
+            if not os.path.exists(token_path):
                 #self.authorize()       # I decided that this could lead to undefined behaviour..
                 raise Exception("This app has not yet been granted permission. \
                 Please call self.authorize() to grant permission to this app.")
-                #print("""There is no credentials file.
-                #Please use self.authorize to create a credentials file and pass it as an argument to creds_file=""") 
-                #return -1
-        # load credentials:
-        creds = json.load(open(creds_file))
-        # check if the tokens are under 3600 seconds old:
-        # for testing:
-        # if the token is older than 3600s, refresh the token:
-        #if (int(time.time()) - creds['time_received']) > 3580:
-            # store the existing refresh_token, as the json returned from refresh_token() does not have one:
+        creds = json.load(open(token_path))
+        # check if the tokens are over 3600 seconds old:
         self.token_age = age = int(time.time()) - creds['time_received']
         if age > 3590:
             print(int(time.time()), '  ', creds['time_received'], '  should == ', age)
             print("Refreshing token...")
-            # store existing refresh_token:
+            # store existing refresh_token as when we refresh a token, the response doesn't have a refresh token:
             temp_refresh_token = creds['refresh_token']
             # refresh_token() returns a dict:
             new_token = self.refresh_token()        
-            print("New token:\t", new_token)
-            # create 'refresh_token' key in the new token, so new_token.keys() should == access_token, token_type, expires_in, refresh_token: plus 'time_received' which I defined:
+            # put back refresh_token:
             new_token['refresh_token'] = temp_refresh_token
-            # new_token['time_received'] = time.time() <- NOT NECESSARY, AS IT IS HANDLED BY refresh_token.
-            if len(new_token.keys()) == 5:
+            # new_token.keys() should == access_token, token_type, expires_in, refresh_token: plus 'time_received' which I defined:
+            if len(new_token.keys()) == 5:      # for testing
                 # update creds_file with new access_token:
-                json.dump(new_token, open(creds_file, 'w'))         #json.dump(obj, fp)
+                json.dump(new_token, open(token_path, 'w'))         #json.dump(obj, fp)
             else:
                 raise Exception("The refresh token should have 5 keys, but there isn't...")
-            """
-            with open(creds_file, 'w') as credentials:
-                credentials.writelines(json.dumps(new_token))   # json.dumps(object) serializes object into type(str)
-            """
+            # return refreshed token:
             return new_token['access_token']
+        # existing access token is still valid (younger than 3600s), so return it:
         else:
             return creds['access_token']
 
-    def refresh_token(self, creds_file=None):
+    def refresh_token(self, token_path=None, oauth_server=None):
         """
         This method returns the refresh_token as a dict. It DOES NOT UPDATE THE CREDS FILE! That should be handled by the caller.
         This method return a refresh_token (which should be a json response) as a dict. IT DOES NOT UPDATE THE CREDENTIALS_FILE! <- this should be handled by the caller.
@@ -216,12 +203,13 @@ class Oauth:
         - URL                   CONSTANT
         - And it uses the POST method.
         """
-        # this is the same server as swap_code.. TODO: define self.oauth_server
-        refresh_url = 'https://accounts.google.com/o/oauth2/token'
-        # check that there is a credentials file, else raise exception:
-        if creds_file is None:
-            creds_file = self.user_path
-            if not os.path.exists(self._credentials_file):
+        if not oauth_server:
+            # this is the same server as swap_code.. TODO: define self.oauth_server
+            oauth_server= 'https://accounts.google.com/o/oauth2/token'
+        # check that there is a tokens file, else raise exception:
+        if token_path is None:
+            token_path = self.token_path
+            if not os.path.exists(self.token_path):
                 #self.authorize()       # I decided that this could lead to undefined behaviour..
                 raise Exception("This app has not yet been granted permission. \
                 Please call self.authorize() needs to grant permission to this app and to get an authorization code.")
@@ -229,13 +217,13 @@ class Oauth:
             'client_id' : self.client_creds.client_id,
             'client_secret' : self.client_creds.client_secret,
             'grant_type' : 'refresh_token',
-            'refresh_token' : json.load(open(creds_file))['refresh_token']
+            'refresh_token' : json.load(open(token_path))['refresh_token']
             }
     
         try:
-            oauth_refresh = requests.post(refresh_url, data=params)
+            oauth_refresh = requests.post(oauth_server, data=params)
         except ValueError as e:
-            print("REFRESH HTTP RESPONSE DID NOT CONTAIN VALID JSON: ", e)
+            Exception("REFRESH HTTP RESPONSE DID NOT CONTAIN VALID JSON: ", e)
         answer = oauth_refresh.json()
         # testing
         answer['time_received'] = int(time.time())
@@ -255,13 +243,15 @@ if __name__ == '__main__':
     # this is to test the get_token() method.
     #   Since I should already have the refresh_token stored in self._credentials_file, get_token() should automatically decide whether it requires a new token, or not, depending on the time:
     
-    cid = '696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com'
-    secret = 'irLCJ9OakyQ0Z-u5u1RfR6Zn'
-    scope = 'https://www.googleapis.com/auth/drive'
-    oauth = Oauth('/home/justin/tmp/credentials.json', scope=scope, client_id=cid, client_secret=secret)
+    #cid = '696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com'
+    #secret = 'irLCJ9OakyQ0Z-u5u1RfR6Zn'
+    #scope = 'https://www.googleapis.com/auth/drive'
+    #oauth = Oauth('/home/justin/tmp/credentials.json', scope=scope, client_id=cid, client_secret=secret)
+    # try get token with new contacts credentials:
+    oauth = Oauth(token_path='/home/justin/tmp/contacts-credentials.json', client_creds='/home/justin/workspaces/APIs/new_contacts-api-for-address-resolution_client_secret_696694623422-nqd5og2ebmfrfh6uodde38h1eliqg9qf.apps.googleusercontent.com.json', scope='https://www.google.com/m8/feeds/')
 
     # step 1)
-    oauth.authorize()
+    #oauth.authorize()
     # the above completed successfully, and created the self.credentials_file, with the initial access_token[s]
     ## step 2)
     #token = oauth.get_token()
