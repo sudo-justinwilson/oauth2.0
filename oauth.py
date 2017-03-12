@@ -229,10 +229,13 @@ class Oauth:
         answer['time_received'] = int(time.time())
         return answer
 
-    def is_valid(self, token):
+    def is_valid(self, token, print_response=False):
         print("Checking if token is valid...")
         target = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
         r = requests.get(target, params={'access_token':token})
+        if print_response:
+            print("Here is the response:")
+            print(r.text)
         if r.status_code == 200:
             return True
         else:
@@ -267,7 +270,7 @@ if __name__ == '__main__':
     ## step 3) test get_token()
     token = oauth.get_token()
     print("This is the token returned by get_token:\t", token)
-    if oauth.is_valid(token):
+    if oauth.is_valid(token, print_response=True):
         print("the token works")
     else:
         print("the token is INVALID")
