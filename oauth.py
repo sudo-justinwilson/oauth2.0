@@ -229,12 +229,6 @@ class Oauth:
         answer['time_received'] = int(time.time())
         return answer
 
-<<<<<<< HEAD
-    def is_valid(self, token):
-        print("Checking if token is valid...")
-        target = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
-        r = requests.get(target, params={'access_token':token})
-=======
     def is_valid(self, token, print_response=False):
         print("Checking if token is valid...")
         target = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
@@ -242,39 +236,10 @@ class Oauth:
         if print_response:
             print("Here is the response:")
             print(r.text)
->>>>>>> breakdown
         if r.status_code == 200:
             return True
         else:
             return False
-<<<<<<< HEAD
-
-class myGetHandler(http.server.SimpleHTTPRequestHandler):
-
-    
-
-    path = ''
-
-    def set_path(data):
-        """
-        This method fetches the Handler.path.
-        It is called by do_GET().
-        """
-        myGetHandler.path = data       # TODO: THIS METHOD SHOULD BE USED TO STORE THE AUTH CODE, AND EXCHANGE IT FOR AN ACCESS TOKEN.
-
-    def do_GET(self):
-        print("THIS IS THE FULL RESPONSE: ", self.headers)
-        myGetHandler.set_path(self.path)
-        http.server.SimpleHTTPRequestHandler.do_GET(self)
-
-    def get_path():
-        """
-        This method gets Handler.path.
-        """
-        return myGetHandler.path
-
-=======
->>>>>>> breakdown
 
 if __name__ == '__main__':
     # NEW CODE:
@@ -305,17 +270,10 @@ if __name__ == '__main__':
     ## step 3) test get_token()
     token = oauth.get_token()
     print("This is the token returned by get_token:\t", token)
-<<<<<<< HEAD
-    if oauth.is_valid(token):
-        print('the token is valide')
-    else:
-        print('the token is NOT valid!!!')
-=======
     if oauth.is_valid(token, print_response=True):
         print("the token works")
     else:
         print("the token is INVALID")
->>>>>>> breakdown
     #target = 'https://www.googleapis.com/drive/v2/files'
     #r = requests.get(target, params={'access_token':token})
     #print(r.text)
