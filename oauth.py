@@ -10,11 +10,12 @@ import webbrowser
 import urllib
 
 # other files in ./:
+from oauthbase import OauthBase
 from clientcredentials import ClientCredentials
 from webserver import WebServer
 
 ###     START NEW           ###
-class Oauth:
+class Oauth(OauthBase):
     """
     """
     #   Start nested classes    #
@@ -101,7 +102,7 @@ class Oauth:
     def swap_code(self, code, params=None, token_path=None, oauth_server=None):
         """
         This method swaps the auth code, from self.webserver.serve_html(), for the oauth tokens. 
-        It should store the oauth tokens, from the HTTP response, in a credentials file, and get_token() should actually get the token.
+        It should store the oauth tokens, from the HTTP response, in a file at token_path, and get_token() should return a token when when the user wants user calls it.
         This method should not be called by the user as it is called by other methods (serve_html) and should be non-public.
         Eventually, the token_path param should be removed as well as it is defined with __init__, and the user should only have to call self.authorize(), but until I've got this class where I want it, token_path will remain for testing...
 
@@ -154,7 +155,15 @@ class Oauth:
         print("Please grant application permission in browser...")
         self.auth_in_browser()
         code = self.webserver.serve_html()
-        self.swap_code(code)
+        #self.swap_code(code)
+        return code
+
+    def grant_permission(self):
+        """
+        This is a convenience that calls authorize and swap_code so that permission is granted and the file at self.token_path is populated with valid access and refresh tokens.
+        """
+        authorization_code = self.authorize()
+        self.swap_code(authorization_code)
 
     def get_token(self, token_path=None):
         """
@@ -252,6 +261,7 @@ if __name__ == '__main__':
     #oauth = Oauth('/home/justin/tmp/credentials.json', scope=scope, client_id=cid, client_secret=secret)
     # try get token with new contacts credentials:
     oauth = Oauth(token_path='/home/justin/tmp/contacts-credentials.json', client_creds='/home/justin/workspaces/APIs/new_contacts-api-for-address-resolution_client_secret_696694623422-nqd5og2ebmfrfh6uodde38h1eliqg9qf.apps.googleusercontent.com.json', scope='https://www.google.com/m8/feeds/')
+    oauth.grant_permission()
 
     # step 1)
     #oauth.authorize()
