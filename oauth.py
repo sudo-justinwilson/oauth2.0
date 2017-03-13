@@ -251,35 +251,8 @@ class Oauth(OauthBase):
             return False
 
 if __name__ == '__main__':
-    # NEW CODE:
-    # this is to test the get_token() method.
-    #   Since I should already have the refresh_token stored in self._credentials_file, get_token() should automatically decide whether it requires a new token, or not, depending on the time:
-    
-    #cid = '696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com'
-    #secret = 'irLCJ9OakyQ0Z-u5u1RfR6Zn'
-    #scope = 'https://www.googleapis.com/auth/drive'
-    #oauth = Oauth('/home/justin/tmp/credentials.json', scope=scope, client_id=cid, client_secret=secret)
-    # try get token with new contacts credentials:
     oauth = Oauth(token_path='/home/justin/tmp/contacts-credentials.json', client_creds='/home/justin/workspaces/APIs/new_contacts-api-for-address-resolution_client_secret_696694623422-nqd5og2ebmfrfh6uodde38h1eliqg9qf.apps.googleusercontent.com.json', scope='https://www.google.com/m8/feeds/')
-    oauth.grant_permission()
-
-    # step 1)
-    #oauth.authorize()
-    # the above completed successfully, and created the self.credentials_file, with the initial access_token[s]
-    ## step 2)
-    #token = oauth.get_token()
-    #print("access token:\t", token)
-    #print("age of token:\t", oauth.token_age)
-    # step 2 seemed to return a valid access_token, but I did NOT actually test it with an API call..
-    ## step 3) test what, and what type self.refresh_token() returns:
-    # I also have to test if changing the default arg of creds_file=None works:
-    #refresh_token = oauth.refresh_token()
-    #print("The type returned  by refresh_token() is: \t", type(refresh_token))
-    #print("The actual content returned by refresh_token() is: \t", refresh_token)
-    # refresh_token seems to work, but I haven't validated it yet... with is_valid...
-    ## step 3) test get_token()
     token = oauth.get_token()
-    print("This is the token returned by get_token:\t", token)
     if oauth.is_valid(token, print_response=True):
         print("the token works")
     else:
