@@ -18,12 +18,6 @@ from webserver import WebServer
 class Oauth(OauthBase):
     """
     """
-    #   Start nested classes    #
-        ###############################################
-
-        ###############################################
-    #   End nested classes    #
-
     def __init__(self, token_path=None, client_creds=None, scope=None, **kwargs):
         """
         Initialize Oauth object.
@@ -251,10 +245,14 @@ class Oauth(OauthBase):
             return False
 
 if __name__ == '__main__':
-    oauth = Oauth(token_path='/home/justin/tmp/contacts-credentials.json', client_creds='/home/justin/workspaces/APIs/new_contacts-api-for-address-resolution_client_secret_696694623422-nqd5og2ebmfrfh6uodde38h1eliqg9qf.apps.googleusercontent.com.json', scope='https://www.google.com/m8/feeds/')
+    client_id_path = '/home/justin/Downloads/client_secret_696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com.json'   
+    scope='https://www.googleapis.com/auth/drive'
+    oauth = Oauth(token_path='/home/justin/tmp/contacts-credentials.json', client_creds=client_id_path, scope=scope)
+    auth_code = oauth.authorize()
+    oauth.swap_code(auth_code)
     token = oauth.get_token()
     if oauth.is_valid(token, print_response=True):
-        print("the token works")
+        print("the token is valid")
     else:
         print("the token is INVALID")
     #target = 'https://www.googleapis.com/drive/v2/files'
