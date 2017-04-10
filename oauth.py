@@ -245,14 +245,17 @@ class Oauth(OauthBase):
             return False
 
 if __name__ == '__main__':
-    client_id_path = '/home/justin/Downloads/client_secret_696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com.json'   
+    #client_id_path = '/home/justin/Downloads/client_secret_696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com.json'   
+    client_id_path = '/home/justin/Downloads/gdrive_client_secret_696694623422-rte0oijs03i83paq0efj7m46nvqphuuj.apps.googleusercontent.com.json'
     scope='https://www.googleapis.com/auth/drive'
     oauth = Oauth(token_path='/home/justin/tmp/contacts-credentials.json', client_creds=client_id_path, scope=scope)
+    ## initial authorization code below:
     auth_code = oauth.authorize()
     oauth.swap_code(auth_code)
     token = oauth.get_token()
     if oauth.is_valid(token, print_response=True):
-        print("the token is valid")
+        print('the token is:\t', token)
+        #print("the token is valid")
     else:
         print("the token is INVALID")
     #target = 'https://www.googleapis.com/drive/v2/files'
