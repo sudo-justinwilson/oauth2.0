@@ -250,8 +250,8 @@ if __name__ == '__main__':
     scope='https://www.googleapis.com/auth/drive'
     oauth = Oauth(token_path='/home/justin/tmp/contacts-credentials.json', client_creds=client_id_path, scope=scope)
     ## initial authorization code below:
-    auth_code = oauth.authorize()
-    oauth.swap_code(auth_code)
+    # UNCOMMENT FOR INITIAL AUTH >auth_code = oauth.authorize()
+    # UNCOMMENT FOR INITIAL AUTH >oauth.swap_code(auth_code)
     token = oauth.get_token()
     if oauth.is_valid(token, print_response=True):
         print('the token is:\t', token)
